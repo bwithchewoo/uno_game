@@ -1,25 +1,41 @@
-import logo from './logo.svg';
-import './App.css';
-
+import { useEffect, useState } from 'react'
+import { Routes, Route } from 'react-router-dom'
+import Login from './Login';
+import Home from './Home';
+import cat from './assets/cat_icon.jpg'
 function App() {
+  const [user, setUser] = useState(null);
+  const [profilePicture, setProfilePicture] = useState("")
+
+  console.log(user)
+  useEffect(() => {
+    // auto-login
+    fetch("/me").then((r) => {
+      if (r.ok) { //response successful
+        r.json().then((user) => {
+          setUser(user)
+
+          if (user.profile_picture) {
+            setProfilePicture(user.profile_picture)
+          }
+          else {
+
+            setProfilePicture(cat)
+          }
+        })
+      }
+    });
+  }, []);
+
+  if (!user) return <Login onLogin={setUser} setProfilePicture={setProfilePicture} />;
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    <>
+      <Routes>
+        <Route path="/" element={<Home user={user} profilePicture={profilePicture} setProfilePicture={setProfilePicture} />}></Route>
+      </Routes>
+    </>
+  )
 }
 
 export default App;
