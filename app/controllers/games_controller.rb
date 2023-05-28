@@ -1,81 +1,115 @@
 class GamesController < ApplicationController
   skip_before_action :authorize
 
-#WORK ON THIS LOGIC
-def CreateGameInstance(userId)
-  game = CreateGame() # Create the game, player, and card models
-  # fill the players
-end
+  #WORK ON THIS LOGIC
+ 
 
-def destroy
-  game = Game.find_by(id: params[:game_id])
-  if game
-    game.cards.destroy_all
-    game.players.destroy_all
-    game.destroy
+  def destroy
+    game = Game.find_by(id: params[:game_id])
+    if game
+      game.cards.destroy_all
+      game.players.destroy_all
+      game.destroy
+    end
   end
-end
 
-def get_players
-game = Game.find_by_id(params[:game_id])
-players = game.players
-render json: players
-end
+  def get_hand
 
-def get_game
+    hand = Card.where(game_id: params[:game_id], player_id: params[:player_id])
+    render json: hand
+  end
+
+  def get_players
   game = Game.find_by_id(params[:game_id])
-  render json: game
-end
+  players = game.players
+  render json: players
+  end
+
+  def get_game
+    game = Game.find_by_id(params[:game_id])
+    render json: game
+  end
 
   def create
     game = Game.create!(has_started: false, direction: "clockwise")
     game_id = game.id
     singleplayer = params[:singleplayer]
-    set_player_order(game_id)
+    
     add_user_as_player(game_id)
     if singleplayer
       fillBots(game_id)
     end
+    set_player_order(game_id)
     render json: game, status: :created
   end
+ 
 
-  def set_player_order(game_id)
-    players = Player.where(game_id: game_id)
-    player_ids = players.pluck(:id)
-    shuffled_player_order = player_ids.shuffle
-    game = Game.find(game_id)
-    game.update(player_order: shuffled_player_order)
-    game.update(current_player_id: shuffled_player_order[0])
-  end
-
-def fillBots(game_id)
-  game = Game.find_by(id: game_id)
-  player_count = game.player_count
-
-  while player_count < 4
-    player = Player.create!(game_id: game_id, is_bot: "true", is_host: "false")
-    player_count += 1
-  end
-  game.update(player_count: player_count)
-end
-
-  def add_user_as_player(game_id)
-    current_user = session[:user_id]
-    game = Game.find_by(id: game_id)
-    player_count = game.player_count
-
-    unless Player.exists?(game_id: game_id)
-      is_host = true
+  def check_turn(game_id, player_id)
+    # Returns true if its player_id's turn in game.
+    current_game = Game.find(game_id)
+    current_player_id = current_game.current_player_id
+    puts "checking player turn, current player id is #{current_player_id}, player trying to play is #{player_id}"
+    puts current_player_id.inspect
+    puts player_id.inspect
+    if current_player_id == player_id
+      puts 'returning true yolo'
+      return true
     else
-      is_host = false
+      return false
+    end
+  end
+
+  def is_card_playable(game_id, card_id)
+    # Returns true if the card is playable , false otherwise
+
+    card_to_play = Card.find_by_id(card_id)
+    # (TODO) Is card to play in the current player's hand and is playable
+    #check value of card_id against value of last_Card_played
+    last_card_played = get_last_card_played(game_id)
+
+    if card_to_play.value == last_card_played.value 
+      return true
+
+    elsif card_to_play.color == last_card_played.color 
+      return true
+
+    elsif card_to_play.color == 'black'
+      return true
+    else 
+      return false
+    end
+  end
+
+  def get_last_card_played(game_id)
+    most_recent_card = Card.where(in_play: true, game_id: game_id).order(updated_at: :desc).first
+  end
+
+  def play_card
+    #current_player_id will eventually need to change back to sessions[:user_id], but doesnt work now for testing
+    current_player_id = params[:player_id].to_i
+    game_id = params[:game_id].to_i
+    card_id = params[:card_id].to_i
+    card = Card.find_by_id(card_id)
+    
+    if !check_turn(game_id, current_player_id)
+      puts 'not ur turn'
+      #check if card is playable, other return error cannot play card
+      #move card from user hand to discard -> change in_play: true, player_id: nil
+      #card_id value
+      return
     end
 
-    player = Player.create!(user_id: current_user, game_id: game_id, is_host: is_host, is_bot: false)
-    new_player_count = game.player_count.to_i + 1
-    game.update(player_count: new_player_count)
+    if !is_card_playable(game_id, card_id)
+      puts'not playable'
+      return
+    end
+
+    puts "card is played, #{card.color} #{card.value}"
+    card.update(in_play: true, player_id: nil)
+
   end
 
-#host, you become host if when user becomes player, there was palyer_count 0
+ 
 
   def start_game
     game = Game.find_by_id(params[:game_id])
@@ -101,11 +135,22 @@ end
 
 
 
-def index
-  puts "Hello"
-  puts ENV
-end
+  def index
+    puts "Hello"
+    puts ENV
+  end
 
+end # End of GamesController
+
+
+
+def set_player_order(game_id)
+  players = Player.where(game_id: game_id)
+  player_ids = players.pluck(:id)
+  shuffled_player_order = player_ids.shuffle
+  game = Game.find(game_id)
+  game.update(player_order: shuffled_player_order)
+  game.update(current_player_id: shuffled_player_order[0])
 end
 
 def setFirstCardInPlay(game_id)
@@ -138,6 +183,36 @@ def generate_hand(game_id, player_id)
     end
   end
   Card.where(id: hand).update_all(player_id: player_id, is_available: false)
+end
+
+
+
+
+def add_user_as_player(game_id)
+  current_user = session[:user_id]
+  game = Game.find_by(id: game_id)
+  player_count = game.player_count
+
+  unless Player.exists?(game_id: game_id)
+    is_host = true
+  else
+    is_host = false
+  end
+
+  player = Player.create!(user_id: current_user, game_id: game_id, is_host: is_host, is_bot: false)
+  new_player_count = game.player_count.to_i + 1
+  game.update(player_count: new_player_count)
+end
+
+def fillBots(game_id)
+  game = Game.find_by(id: game_id)
+  player_count = game.player_count
+
+  while player_count < 4
+    player = Player.create!(game_id: game_id, is_bot: "true", is_host: "false")
+    player_count += 1
+  end
+  game.update(player_count: player_count)
 end
 
 def create_card_array(game_id)

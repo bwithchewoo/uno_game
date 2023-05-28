@@ -46,9 +46,9 @@ def setFirstCardInPlay(game_id)
 
   if random_card
     random_card.update(is_available: false, in_play: true)
+    puts "The first card in play is #{random_card.color} #{random_card.value}"
     return random_card
   end
-
 
 end
 
