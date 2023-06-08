@@ -43,20 +43,32 @@ class GamesController < ApplicationController
     render json: game, status: :created
   end
 
-def draw_cards
+def handle_draw_cards
 #draw until player has playable card
 
   game_id = params[:game_id].to_i
   current_player_id = params[:player_id].to_i
-  last_card = get_last_card_played(game_id)
+  draw_cards(game_id, current_player_id)
+
+end
+
+def check_playable_cards_from_hand(game_id, current_player_id)
   hand = Card.where(game_id: game_id, player_id: current_player_id)
   playable_results = []
   hand.each do |card|
     playable = is_card_playable(game_id, card.id)
     playable_results << playable
   end
+  return playable_results
+end
 
-  has_playable_card = playable_results.include?(true)
+def draw_cards(game_id, current_player_id)
+  last_card = get_last_card_played(game_id)
+
+  hand = Card.where(game_id: game_id, player_id: current_player_id)
+  playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
+  has_playable_card = playable_cards.include?(true)
+
   deck = get_deck(game_id)
   if !has_playable_card && (last_card.value == "+2" || last_card.value == "wild draw 4")
     game = Game.find_by_id(game_id)
@@ -72,6 +84,11 @@ def draw_cards
       random_card.update(is_available: false)
     end
     Card.where(id: random_card.id).update_all(player_id: current_player_id, is_available: false)
+    new_playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
+    has_playable_card = new_playable_cards.include?(true)
+    if !has_playable_card
+      draw_cards(game_id, current_player_id)
+    end
   else
     puts "has playable card"
   end
@@ -161,6 +178,14 @@ def check_turn(game_id, player_id)
   else
     return false
   end
+end
+
+
+def get_existing_game
+  game = Game.find(game_state: "started")
+  render json: {
+    'game' => game
+  }
 end
 
 def is_card_playable(game_id, card_id)
@@ -269,12 +294,79 @@ def set_next_turn(game_id, current_player_id)
     next_index = (current_player_position + 1) % current_game.player_order.length
     next_player = current_game.player_order[next_index]
     current_game.update(current_player_id: next_player)
+    current_player_id = next_player
   elsif current_game.direction == "counter-clockwise"
     current_player_position = current_game.player_order.index(current_player_id)
     previous_index = (current_player_position - 1) % current_game.player_order.length
     previous_player = current_game.player_order[previous_index]
     current_game.update(current_player_id: previous_player)
+    current_player_id = next_player
   end
+
+  if check_player_is_bot(current_player_id)
+    do_bot_action(game_id, current_player_id)
+      # 1. get playable cards for the bot
+      # 2. play playable cards for the bot if exists
+      # 3. or draw until play playable card
+      hand_length = Card.where(game_id: game_id, player_id: current_player_id).length
+    if hand_length > 0
+      set_next_turn(game_id, current_player_id)
+      return
+    else
+      game.update(game_state: "ended")
+      return
+    end
+  end
+
+
+end
+
+def check_player_is_bot(current_player_id)
+  current_player = Player.find_by_id(current_player_id)
+  if current_player.is_bot == true
+    return true
+  else
+    return false
+  end
+end
+
+def do_bot_action(game_id, current_player_id)
+  game = Game.find_by_id(game_id)
+  hand = Card.where(game_id: game_id, player_id: current_player_id)
+  card_ids = hand.pluck(:id)
+
+
+  playable_card_id = card_ids.find {|card_id| is_card_playable(game_id, card_id)}
+  playable_card = Card.find_by_id(playable_card_id)
+  if playable_card
+    puts "card is played, #{playable_card.color} #{playable_card.value}"
+    playable_card.update(in_play: true, player_id: nil)
+    if playable_card.value == "wild" or playable_card.value == "wild draw 4"
+      #above hand will still include playable_card even after update because it points to the query that ran before the update
+      new_hand = Card.where(game_id: game_id, player_id: current_player_id)
+      color_counts = new_hand.group_by(&:color).transform_values(&:count)
+      most_common_color = color_counts.max_by { |_, count| count }&.first
+      puts most_common_color
+    end
+    play_card_effect(playable_card_id, most_common_color, game_id, current_player_id)
+  else
+    draw_cards(game_id, current_player_id)
+    hand = Card.where(game_id: game_id, player_id: current_player_id)
+    new_card_ids = hand.pluck(:id)
+    playable_card_id = new_card_ids.find {|card_id| is_card_playable(game_id, card_id)}
+    playable_card = Card.find_by_id(playable_card_id)
+    puts "card is played, #{playable_card.color} #{playable_card.value}"
+    playable_card.update(in_play:true, player_id: nil)
+    if playable_card.value == "wild" or playable_card.value == "wild draw 4"
+      #above hand will still include playable_card even after update because it points to the query that ran before the update
+      new_hand = Card.where(game_id: game_id, player_id: current_player_id)
+      color_counts = new_hand.group_by(&:color).transform_values(&:count)
+      most_common_color = color_counts.max_by { |_, count| count }&.first
+      puts most_common_color
+    end
+    play_card_effect(playable_card_id, most_common_color, game_id, current_player_id)
+  end
+
 end
 
 def play_card_effect(card_id, color, game_id, current_player_id)

@@ -32,9 +32,11 @@ ActiveRecord::Schema.define(version: 2023_02_14_153648) do
     t.string "direction"
     t.integer "current_player_id"
     t.integer "player_count"
-    t.boolean "has_started"
+    t.string "game_state"
     t.boolean "bot_fill"
+    t.integer "draw_cards_counter"
     t.integer "player_order", default: [], array: true
+    t.integer "player_ranking", default: [], array: true
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
   end
