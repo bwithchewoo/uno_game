@@ -60,6 +60,7 @@ function Home({ user, profilePicture, setProfilePicture, gameObject, setGameObje
         .then(response => response.json())
         .then(data => {
             const gameObject = data
+            console.log('im setting the gameobject now,', gameObject)
             setGameObject(gameObject)
             setSinglePlayer(true)
         })

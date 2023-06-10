@@ -14,6 +14,7 @@ Rails.application.routes.draw do
   post "/signup", to: "users#create"
   post "/login", to: "sessions#create"
   delete "/logout", to: "sessions#destroy"
+  get "/getexistinggame", to: "games#get_existing_game"
   get "/me", to: "users#show"
   patch "/updatepicture", to: "users#update_picture"
   # Routing logic: fallback requests for React Router.

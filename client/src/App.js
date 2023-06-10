@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import Login from './Login';
 import Home from './Home';
 import Lobby from './Lobby';
+import Game from './Game';
 import cat from './assets/cat_icon.jpg'
 function App() {
   const [user, setUser] = useState(null);
@@ -11,6 +12,7 @@ function App() {
   const [singlePlayer, setSinglePlayer] = useState(null)
 
   console.log(user)
+  console.log('app just dropped, gameobject is ', gameObject)
   useEffect(() => {
     // auto-login
     fetch("/me").then((r) => {
@@ -30,6 +32,17 @@ function App() {
     });
   }, []);
 
+  useEffect(() => {
+    // get existin game if it exists
+    fetch("/getexistinggame").then((r) => {
+      if (r.ok) {
+        r.json().then((game) => {
+          setGameObject(game)
+        })
+      }
+    })
+  }, []);
+
   if (!user) return <Login onLogin={setUser} setProfilePicture={setProfilePicture} />;
 
   return (
@@ -37,7 +50,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home user={user} profilePicture={profilePicture} setProfilePicture={setProfilePicture} gameObject={gameObject} setGameObject={setGameObject} singlePlayer={singlePlayer} setSinglePlayer={setSinglePlayer} />}></Route>
         <Route path="/lobby" element={<Lobby user={user} profilePicture={profilePicture} gameObject={gameObject} setGameObject={setGameObject} singlePlayer={singlePlayer} setSinglePlayer={setSinglePlayer}  />}></Route>
-        <Route path="/game/:game_id"></Route>
+        <Route path="/game/:game_id" element={<Game user={user} profilePicture={profilePicture} gameObject={gameObject} setGameObject={setGameObject} singlePlayer={singlePlayer} setSinglePlayer={setSinglePlayer} />}></Route>
       </Routes>
     </>
   )

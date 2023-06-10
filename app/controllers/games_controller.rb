@@ -19,6 +19,11 @@ class GamesController < ApplicationController
     render json: hand
   end
 
+  def get_existing_game
+    game = Game.where(game_state: ["started", "created"]).first
+    render json: game
+  end
+
   def get_players
   game = Game.find_by_id(params[:game_id])
   players = game.players
@@ -54,47 +59,7 @@ def handle_draw_cards
 
 end
 
-def check_playable_cards_from_hand(game_id, current_player_id)
-  hand = Card.where(game_id: game_id, player_id: current_player_id)
-  playable_results = []
-  hand.each do |card|
-    playable = is_card_playable(game_id, card.id)
-    playable_results << playable
-  end
-  return playable_results
-end
 
-def draw_cards(game_id, current_player_id)
-  last_card = get_last_card_played(game_id)
-
-  hand = Card.where(game_id: game_id, player_id: current_player_id)
-  playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
-  has_playable_card = playable_cards.include?(true)
-
-  deck = get_deck(game_id)
-  if !has_playable_card && (last_card.value == "+2" || last_card.value == "wild draw 4")
-    game = Game.find_by_id(game_id)
-    counter = game.draw_cards_counter
-    new_cards = deck.select { |card| card.is_available}.sample(counter)
-    new_card_ids = new_cards.pluck(:id)
-    Card.where(id: new_card_ids).update_all(player_id: current_player_id, is_available: false)
-    game.update(draw_cards_counter: 0)
-  elsif !has_playable_card
-
-    random_card = deck.sample
-    if random_card.is_available == true
-      random_card.update(is_available: false)
-    end
-    Card.where(id: random_card.id).update_all(player_id: current_player_id, is_available: false)
-    new_playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
-    has_playable_card = new_playable_cards.include?(true)
-    if !has_playable_card
-      draw_cards(game_id, current_player_id)
-    end
-  else
-    puts "has playable card"
-  end
-end
 
 
   def play_card
@@ -135,9 +100,6 @@ end
   end
 
 
-
-
-
   def start_game
     game = Game.find_by_id(params[:game_id])
     game_id = params[:game_id]
@@ -158,6 +120,8 @@ end
   else
     return "Not enough players to start the game."
     end
+    game = Game.find_by_id(params[:game_id])
+    render json: game
   end
 
 
@@ -218,6 +182,48 @@ end
 
 def get_last_card_played(game_id)
   most_recent_card = Card.where(in_play: true, game_id: game_id).order(updated_at: :desc).first
+end
+
+def check_playable_cards_from_hand(game_id, current_player_id)
+  hand = Card.where(game_id: game_id, player_id: current_player_id)
+  playable_results = []
+  hand.each do |card|
+    playable = is_card_playable(game_id, card.id)
+    playable_results << playable
+  end
+  return playable_results
+end
+
+def draw_cards(game_id, current_player_id)
+  last_card = get_last_card_played(game_id)
+
+  hand = Card.where(game_id: game_id, player_id: current_player_id)
+  playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
+  has_playable_card = playable_cards.include?(true)
+
+  deck = get_deck(game_id)
+  if !has_playable_card && (last_card.value == "+2" || last_card.value == "wild draw 4")
+    game = Game.find_by_id(game_id)
+    counter = game.draw_cards_counter
+    new_cards = deck.select { |card| card.is_available}.sample(counter)
+    new_card_ids = new_cards.pluck(:id)
+    Card.where(id: new_card_ids).update_all(player_id: current_player_id, is_available: false)
+    game.update(draw_cards_counter: 0)
+  elsif !has_playable_card
+
+    random_card = deck.sample
+    if random_card.is_available == true
+      random_card.update(is_available: false)
+    end
+    Card.where(id: random_card.id).update_all(player_id: current_player_id, is_available: false)
+    new_playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
+    has_playable_card = new_playable_cards.include?(true)
+    if !has_playable_card
+      draw_cards(game_id, current_player_id)
+    end
+  else
+    puts "has playable card"
+  end
 end
 
 def set_player_order(game_id)
