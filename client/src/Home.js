@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useState} from 'react'
+import {Link} from 'react-router-dom';
 import drool from './assets/drool.jpg'
 import penguin from './assets/penguin.jpg'
 import cat from './assets/cat_icon.jpg'
 import plane from './assets/plane-icon.jpg'
 import loading from './assets/Loading.png'
 import singleplayer from './assets/SINGLEPLAYER.png'
-function Home({ user, profilePicture, setProfilePicture }) {
+function Home({ user, profilePicture, setProfilePicture, gameObject, setGameObject, singlePlayer, setSinglePlayer }) {
     const [isVisible, setIsVisible] = useState(false)
     const [profileLoading, setProfileLoading] = useState(false)
+    
+    
 
     const showImageList = () => {
         setIsVisible(!isVisible)
@@ -46,6 +49,22 @@ function Home({ user, profilePicture, setProfilePicture }) {
         }
     }
 
+    const createSingleplayerGame = (e) => {
+        fetch("/creategame", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({singleplayer: true}),
+        })
+        .then(response => response.json())
+        .then(data => {
+            const gameObject = data
+            setGameObject(gameObject)
+            setSinglePlayer(true)
+        })
+    }
+
     return (
         <div>
             <div style={{ fontSize: "20px", display: "flex", flexDirection: "row" }}>
@@ -64,7 +83,9 @@ function Home({ user, profilePicture, setProfilePicture }) {
                 </div>
             </div>
             <div>
-                <img src={singleplayer} style={{ position: "absolute", top: "30%", left: "30%", width: "200px", height: "300px" }} />
+                <Link to="/lobby">
+                    <img src={singleplayer} style={{ position: "absolute", top: "30%", left: "30%", width: "200px", height: "300px" }} onClick={(e) => createSingleplayerGame(e)} />
+                </Link>
             </div>
         </div>
     )

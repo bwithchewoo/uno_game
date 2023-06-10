@@ -7,7 +7,7 @@ Rails.application.routes.draw do
   get "/getgame", to: "games#get_game"
   post "/creategame", to: "games#create"
   post "/startgame", to: "games#start_game"
-  delete "/deletegame", to: "games#destroy"
+  delete "/deletegame/:id", to: "games#destroy"
   get "/existinggame", to: "games#get_existing_game"
   post "/playcard", to:"games#play_card"
   post "/drawcards", to:"games#handle_draw_cards"

@@ -47,7 +47,9 @@ def handle_draw_cards
 #draw until player has playable card
 
   game_id = params[:game_id].to_i
-  current_player_id = params[:player_id].to_i
+  current_user_id = session[:user_id]
+  current_player = Player.find_by(user_id: current_user_id)
+  current_player_id = current_player.id
   draw_cards(game_id, current_player_id)
 
 end
@@ -97,7 +99,9 @@ end
 
   def play_card
     #current_player_id will eventually need to change back to sessions[:user_id], but doesnt work now for testing
-    current_player_id = params[:player_id].to_i
+    current_user_id = session[:user_id]
+  current_player = Player.find_by(user_id: current_user_id)
+  current_player_id = current_player.id
     game_id = params[:game_id].to_i
     game = Game.find_by_id(game_id)
     card_id = params[:card_id].to_i

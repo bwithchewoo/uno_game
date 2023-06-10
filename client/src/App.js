@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Login from './Login';
 import Home from './Home';
+import Lobby from './Lobby';
 import cat from './assets/cat_icon.jpg'
 function App() {
   const [user, setUser] = useState(null);
   const [profilePicture, setProfilePicture] = useState("")
+  const [gameObject, setGameObject] = useState(null)
+  const [singlePlayer, setSinglePlayer] = useState(null)
 
   console.log(user)
   useEffect(() => {
@@ -32,7 +35,9 @@ function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Home user={user} profilePicture={profilePicture} setProfilePicture={setProfilePicture} />}></Route>
+        <Route path="/" element={<Home user={user} profilePicture={profilePicture} setProfilePicture={setProfilePicture} gameObject={gameObject} setGameObject={setGameObject} singlePlayer={singlePlayer} setSinglePlayer={setSinglePlayer} />}></Route>
+        <Route path="/lobby" element={<Lobby user={user} profilePicture={profilePicture} gameObject={gameObject} setGameObject={setGameObject} singlePlayer={singlePlayer} setSinglePlayer={setSinglePlayer}  />}></Route>
+        <Route path="/game/:game_id"></Route>
       </Routes>
     </>
   )
