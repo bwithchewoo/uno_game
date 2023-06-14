@@ -20,8 +20,8 @@ class GamesController < ApplicationController
   end
 
   def get_existing_game
-    game = Game.where(game_state: ["started", "created"]).first
-    render json: game
+    game = Game.where(game_state: ["started", "created"]).last
+    render json: game, include: { players: { include: :cards } }
   end
 
   def get_players
@@ -32,7 +32,7 @@ class GamesController < ApplicationController
 
   def get_game
     game = Game.find_by_id(params[:game_id])
-    render json: game
+    render json: game, include: { players: { include: :cards } }
   end
 
   def create
@@ -121,7 +121,7 @@ end
     return "Not enough players to start the game."
     end
     game = Game.find_by_id(params[:game_id])
-    render json: game
+    render json: game, include: { players: { include: :cards } }
   end
 
 

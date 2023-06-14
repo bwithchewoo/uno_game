@@ -1,5 +1,5 @@
-import { useState} from 'react'
-import {Link} from 'react-router-dom';
+import { useState } from 'react'
+import { Link } from 'react-router-dom';
 import drool from './assets/drool.jpg'
 import penguin from './assets/penguin.jpg'
 import cat from './assets/cat_icon.jpg'
@@ -9,8 +9,8 @@ import singleplayer from './assets/SINGLEPLAYER.png'
 function Home({ user, profilePicture, setProfilePicture, gameObject, setGameObject, singlePlayer, setSinglePlayer }) {
     const [isVisible, setIsVisible] = useState(false)
     const [profileLoading, setProfileLoading] = useState(false)
-    
-    
+
+
 
     const showImageList = () => {
         setIsVisible(!isVisible)
@@ -55,15 +55,15 @@ function Home({ user, profilePicture, setProfilePicture, gameObject, setGameObje
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({singleplayer: true}),
+            body: JSON.stringify({ singleplayer: true }),
         })
-        .then(response => response.json())
-        .then(data => {
-            const gameObject = data
-            console.log('im setting the gameobject now,', gameObject)
-            setGameObject(gameObject)
-            setSinglePlayer(true)
-        })
+            .then(response => response.json())
+            .then(data => {
+                const gameObject = data
+
+                setGameObject(gameObject)
+                setSinglePlayer(true)
+            })
     }
 
     return (

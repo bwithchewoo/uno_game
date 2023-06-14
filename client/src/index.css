@@ -4,9 +4,74 @@
   align-items: center;
 
 }
+
 .lobby {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 90vh;
+}
+
+.game-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.player-container {
+  position: absolute;
+
+  /* Adjust the width as needed */
+  height: 150px;
+  /* Adjust the height as needed */
+  /* Add other necessary styles */
+}
+
+.bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.right {
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+.top {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.left {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.card {
+  width: 100px;
+  height: 150px;
+  margin-right: 10px;
+  border-radius: 5px;
+
+  /* Additional card styles */
+}
+
+.card-container {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  /* Adjust the minimum and maximum width of each card */
+  grid-gap: 5px;
+}
+
+.card.blank {
+  border: 1px solid black;
+  /* Set the background color to white */
+  /* Add any additional styling for the blank cards */
 }
