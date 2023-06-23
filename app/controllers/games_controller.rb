@@ -5,7 +5,9 @@ class GamesController < ApplicationController
 
 
   def destroy
-    game = Game.find_by(id: params[:game_id])
+    game = Game.find_by(id: params[:id])
+    puts "This is the params in destroy #{params}"
+    puts "This is the game thats being deleted #{game}"
     if game
       game.cards.destroy_all
       game.players.destroy_all
@@ -19,9 +21,33 @@ class GamesController < ApplicationController
     render json: hand
   end
 
+def get_users_profile_pictures
+  game = Game.find(params[:game_id])
+  players = game.players
+  player_data = players.map do |player|
+    if player.user_id
+      user = User.find(player.user_id)
+      {
+        id: player.id,
+        user_id: player.user_id,
+        username: user.username,
+        profile_picture: user.profile_picture,
+        is_bot: false
+      }
+    else
+      {
+        id: player.id,
+        is_bot: true
+      }
+    end
+  end
+  render json: {players: player_data}
+end
+
   def get_existing_game
-    game = Game.where(game_state: ["started", "created"]).last
-    render json: game, include: { players: { include: :cards } }
+    current_user_id = session[:user_id]
+    game = Game.joins(:players).where(game_state: ["started", "created"], players: { user_id: current_user_id }).last
+    render json: game, include: {cards: {}, players: { include: :cards } }
   end
 
   def get_players
@@ -32,7 +58,7 @@ class GamesController < ApplicationController
 
   def get_game
     game = Game.find_by_id(params[:game_id])
-    render json: game, include: { players: { include: :cards } }
+    render json: game, include: {cards: {}, players: { include: :cards } }
   end
 
   def create
@@ -44,8 +70,34 @@ class GamesController < ApplicationController
     if singleplayer
       fillBots(game_id)
     end
-    set_player_order(game_id)
-    render json: game, status: :created
+    set_player_order(game_id, singleplayer)
+    game = Game.find_by_id(game_id)
+    render json: game, include: {cards: {}, players: { include: :cards } }, status: :created
+  end
+
+  def join_game
+    game = Game.where(game_state: "created").where("player_count < ?", 4).first
+
+    if game.nil?
+      render json: {error: "no games to join"}
+      return
+      # No suitable game found, handle accordingly
+    else
+      game_id = game.id
+      add_user_as_player(game_id)
+      # Join the game
+    end
+    game_id = game.id
+    game = Game.find_by_id(game_id)
+
+    message = {
+      user_who_joined: session[:user_id],
+      some_message: "someone joined the game yay",
+      updated_game: game.as_json(include: { cards: {}, players: { include: :cards } })
+    }
+    puts 'borasdjoji'
+    GameChannel.broadcast_to(game_id, message)
+    render json: game, include: {cards: {}, players: { include: :cards } }
   end
 
 def handle_draw_cards
@@ -53,9 +105,12 @@ def handle_draw_cards
 
   game_id = params[:game_id].to_i
   current_user_id = session[:user_id]
-  current_player = Player.find_by(user_id: current_user_id)
+  current_player = Player.find_by(user_id: current_user_id, game_id: game_id)
   current_player_id = current_player.id
+  puts current_player_id
   draw_cards(game_id, current_player_id)
+  game = Game.find_by_id(game_id)
+  render json: game, include: {cards: {}, players: { include: :cards } }
 
 end
 
@@ -64,11 +119,13 @@ end
 
   def play_card
     #current_player_id will eventually need to change back to sessions[:user_id], but doesnt work now for testing
-    current_user_id = session[:user_id]
-  current_player = Player.find_by(user_id: current_user_id)
-  current_player_id = current_player.id
     game_id = params[:game_id].to_i
     game = Game.find_by_id(game_id)
+    current_user_id = session[:user_id]
+    current_player = Player.find_by(user_id: current_user_id, game_id: game_id)
+    puts `current_player is#{current_player}`
+    current_player_id = current_player.id
+
     card_id = params[:card_id].to_i
     color = params[:color]
     card = Card.find_by_id(card_id)
@@ -78,11 +135,13 @@ end
       #check if card is playable, other return error cannot play card
       #move card from user hand to discard -> change in_play: true, player_id: nil
       #card_id value
+      render json: {error: "not your turn"}
       return
     end
 
     if !is_card_playable(game_id, card_id)
       puts'not playable'
+      render json: {error: "not playable card"}
       return
     end
 
@@ -92,11 +151,14 @@ end
     hand_length = Card.where(game_id: game_id, player_id: current_player_id).length
     if hand_length > 0
       set_next_turn(game_id, current_player_id)
-      return
+
+
     else
       game.update(game_state: "ended")
-      return
+
     end
+    game = Game.find_by_id(params[:game_id])
+    render json: game, include: {cards: {}, players: { include: :cards } }
   end
 
 
@@ -121,7 +183,8 @@ end
     return "Not enough players to start the game."
     end
     game = Game.find_by_id(params[:game_id])
-    render json: game, include: { players: { include: :cards } }
+    GameChannel.broadcast_to(game_id, "its me")
+    render json: game, include: {cards: {}, players: { include: :cards } }
   end
 
 
@@ -188,6 +251,7 @@ def check_playable_cards_from_hand(game_id, current_player_id)
   hand = Card.where(game_id: game_id, player_id: current_player_id)
   playable_results = []
   hand.each do |card|
+    puts "card value is #{card.value} and card color is #{card.color}"
     playable = is_card_playable(game_id, card.id)
     playable_results << playable
   end
@@ -195,41 +259,83 @@ def check_playable_cards_from_hand(game_id, current_player_id)
 end
 
 def draw_cards(game_id, current_player_id)
+  game = Game.find_by_id(game_id)
   last_card = get_last_card_played(game_id)
+  puts "Last card value is #{last_card.value}"
 
   hand = Card.where(game_id: game_id, player_id: current_player_id)
   playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
+  puts "Playable cards? #{playable_cards}"
   has_playable_card = playable_cards.include?(true)
 
-  deck = get_deck(game_id)
-  if !has_playable_card && (last_card.value == "+2" || last_card.value == "wild draw 4")
+  deck = Card.where(game_id: game_id, is_available: true)
+  #IF DECK.LENGTH = 0, FIND ALL CARDS WHERE IN_PLAY: TRUE, CHANGE BACK TO IN_PLAY: FALSE AND IS_AVAILABLE: TRUE AND CHANGE ALL WILD CARDS BACK TO COLOR:BLACK
+  if !has_playable_card && (last_card.value == "+2" || last_card.value == "wild draw 4") && game.draw_cards_counter != 0
     game = Game.find_by_id(game_id)
     counter = game.draw_cards_counter
+    if deck.length == 0
+      discardPile = Card.where(game_id: game_id, in_play: true).where.not(id: last_card.id)
+      discardPile.each do |card|
+        if ['wild', 'wild draw 4'].include?(card.value)
+          card.update(in_play: false, is_available: true, color: 'black')
+        else
+          card.update(in_play: false, is_available: true)
+        end
+      end
+    end
+    deck = Card.where(game_id: game_id, is_available: true)
     new_cards = deck.select { |card| card.is_available}.sample(counter)
     new_card_ids = new_cards.pluck(:id)
+    puts "This is new_card_ids #{new_card_ids}"
     Card.where(id: new_card_ids).update_all(player_id: current_player_id, is_available: false)
     game.update(draw_cards_counter: 0)
+    if !has_playable_card
+      draw_cards(game_id, current_player_id)
+    end
   elsif !has_playable_card
-
+    if deck.length == 0
+      discardPile = Card.where(game_id: game_id, in_play: true).where.not(id: last_card.id)
+      discardPile.each do |card|
+        if ['wild', 'wild draw 4'].include?(card.value)
+          card.update(in_play: false, is_available: true, color: 'black')
+        else
+          card.update(in_play: false, is_available: true)
+        end
+      end
+    end
+    deck = Card.where(game_id: game_id, is_available: true)
     random_card = deck.sample
-    if random_card.is_available == true
+    if random_card
       random_card.update(is_available: false)
     end
+    puts "This is random card: #{random_card}"
     Card.where(id: random_card.id).update_all(player_id: current_player_id, is_available: false)
+    hand = Card.where(game_id: game_id, player_id: current_player_id)
     new_playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
     has_playable_card = new_playable_cards.include?(true)
     if !has_playable_card
       draw_cards(game_id, current_player_id)
     end
   else
+
     puts "has playable card"
   end
 end
 
-def set_player_order(game_id)
+def set_player_order(game_id, singleplayer)
   players = Player.where(game_id: game_id)
+  shuffled_player_order = []
+  if (singleplayer)
+    current_user_id = session[:user_id]
+    current_player = Player.find_by(user_id: current_user_id)
+    current_user_player = players.find_by(user_id: current_user_id)
+    other_players = players.where.not(id: current_user_player.id)
+    shuffled_other_players = other_players.pluck(:id).shuffle
+    shuffled_player_order = [current_user_player.id] + shuffled_other_players
+  else
   player_ids = players.pluck(:id)
   shuffled_player_order = player_ids.shuffle
+  end
   game = Game.find(game_id)
   game.update(player_order: shuffled_player_order)
   game.update(current_player_id: shuffled_player_order[0])
@@ -237,7 +343,7 @@ end
 
 def setFirstCardInPlay(game_id)
   deck = get_deck(game_id)
-  random_card = deck.find { |card| card.is_available? && card.color != "black" }
+  random_card = deck.find { |card| card.is_available? && card.color != "black" && card.value != "+2"}
 
   if random_card
     random_card.update(is_available: false, in_play: true)
@@ -305,16 +411,21 @@ def set_next_turn(game_id, current_player_id)
     next_player = current_game.player_order[next_index]
     current_game.update(current_player_id: next_player)
     current_player_id = next_player
+    puts "#{current_player_id}"
   elsif current_game.direction == "counter-clockwise"
     current_player_position = current_game.player_order.index(current_player_id)
     previous_index = (current_player_position - 1) % current_game.player_order.length
     previous_player = current_game.player_order[previous_index]
     current_game.update(current_player_id: previous_player)
-    current_player_id = next_player
+    current_player_id = previous_player
+    puts "#{current_player_id}"
   end
 
   if check_player_is_bot(current_player_id)
-    do_bot_action(game_id, current_player_id)
+    puts "check_player_is_bot returned true"
+      do_bot_action(game_id, current_player_id)
+      game = Game.find_by_id(game_id)
+      current_player_id = game.current_player_id
       # 1. get playable cards for the bot
       # 2. play playable cards for the bot if exists
       # 3. or draw until play playable card
@@ -333,6 +444,7 @@ end
 
 def check_player_is_bot(current_player_id)
   current_player = Player.find_by_id(current_player_id)
+  puts "check_player_is_bot returning current_player is #{current_player}"
   if current_player.is_bot == true
     return true
   else
@@ -346,7 +458,7 @@ def do_bot_action(game_id, current_player_id)
   card_ids = hand.pluck(:id)
 
 
-  playable_card_id = card_ids.find {|card_id| is_card_playable(game_id, card_id)}
+  playable_card_id = card_ids.find {|card_id| is_card_playable(game_id, card_id) }
   playable_card = Card.find_by_id(playable_card_id)
   if playable_card
     puts "card is played, #{playable_card.color} #{playable_card.value}"
@@ -354,16 +466,20 @@ def do_bot_action(game_id, current_player_id)
     if playable_card.value == "wild" or playable_card.value == "wild draw 4"
       #above hand will still include playable_card even after update because it points to the query that ran before the update
       new_hand = Card.where(game_id: game_id, player_id: current_player_id)
-      color_counts = new_hand.group_by(&:color).transform_values(&:count)
+      color_counts = new_hand.where.not(color: "black").group_by(&:color).transform_values(&:count)
       most_common_color = color_counts.max_by { |_, count| count }&.first
       puts most_common_color
     end
     play_card_effect(playable_card_id, most_common_color, game_id, current_player_id)
+    game = Game.find_by_id(game_id)
   else
     draw_cards(game_id, current_player_id)
     hand = Card.where(game_id: game_id, player_id: current_player_id)
+    puts "This is hand#{hand}"
     new_card_ids = hand.pluck(:id)
-    playable_card_id = new_card_ids.find {|card_id| is_card_playable(game_id, card_id)}
+    puts "This is new_card_ids#{new_card_ids}"
+    playable_card_id = new_card_ids.find {|card_id| is_card_playable(game_id, card_id) }
+    puts "This is playable_card_id#{playable_card_id}"
     playable_card = Card.find_by_id(playable_card_id)
     puts "card is played, #{playable_card.color} #{playable_card.value}"
     playable_card.update(in_play:true, player_id: nil)
@@ -375,6 +491,7 @@ def do_bot_action(game_id, current_player_id)
       puts most_common_color
     end
     play_card_effect(playable_card_id, most_common_color, game_id, current_player_id)
+    game = Game.find_by_id(game_id)
   end
 
 end
@@ -389,7 +506,11 @@ def play_card_effect(card_id, color, game_id, current_player_id)
     counter_add_four = current_game.draw_cards_counter.to_i + 4
     current_game.update(draw_cards_counter: counter_add_four)
   elsif card_to_play.value == "reverse"
-    current_game.update(direction: "counter-clockwise")
+    if(current_game.direction == "clockwise")
+      current_game.update(direction: "counter-clockwise")
+    else
+      current_game.update(direction: "clockwise")
+    end
   elsif card_to_play.value == "+2"
     counter_add_two = current_game.draw_cards_counter.to_i + 2
     current_game.update(draw_cards_counter: counter_add_two)

@@ -7,16 +7,19 @@ Rails.application.routes.draw do
   get "/getgame", to: "games#get_game"
   post "/creategame", to: "games#create"
   post "/startgame", to: "games#start_game"
+  post "/joingame", to: "games#join_game"
   delete "/deletegame/:id", to: "games#destroy"
   get "/existinggame", to: "games#get_existing_game"
   post "/playcard", to:"games#play_card"
   post "/drawcards", to:"games#handle_draw_cards"
   post "/signup", to: "users#create"
+  get "/profilepics/:game_id", to: "games#get_users_profile_pictures"
   post "/login", to: "sessions#create"
   delete "/logout", to: "sessions#destroy"
   get "/getexistinggame", to: "games#get_existing_game"
   get "/me", to: "users#show"
   patch "/updatepicture", to: "users#update_picture"
+  mount ActionCable.server => '/cable'
   # Routing logic: fallback requests for React Router.
   # Leave this here to help deploy your app later!
   get "*path", to: "fallback#index", constraints: ->(req) { !req.xhr? && req.format.html? }

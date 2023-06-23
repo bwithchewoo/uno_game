@@ -53,6 +53,9 @@
 }
 
 .card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100px;
   height: 150px;
   margin-right: 10px;
@@ -62,16 +65,44 @@
 }
 
 .card-container {
-  display: grid;
-  grid-template-rows: 1fr;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  /* Adjust the minimum and maximum width of each card */
-  grid-gap: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 5px;
+  position: relative;
+  width: 700px;
 }
 
 .card.blank {
   border: 1px solid black;
+
   /* Set the background color to white */
   /* Add any additional styling for the blank cards */
+}
+
+.white-text {
+  color: white;
+}
+
+.card.blank:not(:first-child) {
+  margin-left: -60px;
+  /* Adjust the negative margin as needed */
+}
+
+.special-cards-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+.deck-card {
+  background: linear-gradient(to bottom right, black 50%, red 50%);
+  color: white;
+  border: 2px solid black;
+}
+
+.last-card-played {
+  border: 1px solid black;
 }
