@@ -21,6 +21,21 @@ class GamesController < ApplicationController
     render json: hand
   end
 
+  def add_bot
+    game = Game.find(params[:game_id])
+    game_id = game.id
+    player_count = game.player_count
+    player = Player.create!(game_id: game_id, is_bot: "true", is_host: "false")
+    player_count += 1
+    game.update(player_count: player_count)
+    game = Game.find(params[:game_id])
+    message = {
+      updated_game: game.as_json(include: { cards: {}, players: { include: :cards } })
+    }
+    GameChannel.broadcast_to(game_id, message)
+    render json: game, include: {cards: {}, players: { include: :cards } }
+  end
+
 def get_users_profile_pictures
   game = Game.find(params[:game_id])
   players = game.players
@@ -167,24 +182,29 @@ end
     game_id = params[:game_id]
     players = Player.where(game_id: game_id)
     if game.player_count == 4
-    game.update(game_state: "started")
-    card_array = create_card_array(game.id)
+      game.update(game_state: "started")
+      card_array = create_card_array(game.id)
 
-    card_array.each do |card|
-      new_card = Card.new(card)
-      puts new_card
-      new_card.save
-    end
-    players.each do |player|
-      hand = generate_hand(game_id, player.id)
-    end
-    first_card = setFirstCardInPlay(game_id)
-  else
-    return "Not enough players to start the game."
-    end
-    game = Game.find_by_id(params[:game_id])
-    GameChannel.broadcast_to(game_id, "its me")
+      card_array.each do |card|
+        new_card = Card.new(card)
+        puts new_card
+        new_card.save
+      end
+      players.each do |player|
+        hand = generate_hand(game_id, player.id)
+      end
+      first_card = setFirstCardInPlay(game_id)
+      game = Game.find_by_id(params[:game_id])
+      message = {
+        updated_game: game.as_json(include: { cards: {}, players: { include: :cards } })
+      }
+
+      GameChannel.broadcast_to(game_id, message)
     render json: game, include: {cards: {}, players: { include: :cards } }
+    else 
+      render json: { error: "Not enough players to start the game." }
+    end
+    
   end
 
 

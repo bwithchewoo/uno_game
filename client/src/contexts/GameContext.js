@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../App';
 // Create a new context
 const GameContext = createContext();
@@ -8,6 +9,7 @@ export const useGameContext = () => useContext(GameContext);
 
 // Game context provider component
 export const GameProvider = ({ children }) => {
+    const navigate = useNavigate();
     const userContext = useContext(UserContext);
     const { setPlayerData } = userContext;
     // State to hold the game object
@@ -45,6 +47,9 @@ export const GameProvider = ({ children }) => {
                 }
             })
 
+        }
+        else if (gameObject && gameObject.game_state == "started") {
+            navigate(`/game/${gameObject.id}`)
         }
     }, [gameObject, setPlayerData]);
 

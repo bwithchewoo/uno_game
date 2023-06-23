@@ -45,7 +45,15 @@ function Lobby() {
             })
                 .then(response => response.json())
                 .then(data => {
-                    updateGameObject(data)
+                    if (data.error == "Not enough players to start the game.") {
+                        alert("Not enough players to start the game. Wait for more players or add bots.")
+                    } else {
+
+                    
+                        console.log(data)
+                        updateGameObject(data)
+                        navigate(`/game/${data.id}`)
+                    }
                 })
         }
     }
@@ -57,8 +65,6 @@ function Lobby() {
             <Link to="/">
                 <button onClick={(e) => deleteGame(e)}>Home</button>
             </Link>
-
-
             <div className="lobby">
                 {/* <img src={profilePicture} style={{ width: "100px", height: "100px" }} className="centered-image" /> */}
                 {Array(4).fill().map((_, index) => {
@@ -68,17 +74,11 @@ function Lobby() {
                     console.log('player:', player);
 
                     return (
-                        <ProfilePicture index={index} player_data={player}></ProfilePicture>
+                        <ProfilePicture index={index} player_data={player} gameObject={gameObject} updateGameObject={updateGameObject}></ProfilePicture>
                     )
                 })}
-            </div>
-            {
-                gameObject?.id ?
-                    (<Link to={`/game/${gameObject?.id}`}>
-                        <button onClick={(e) => startGame(e)}>Start Game</button>
-                    </Link>) : 'game object is null'
-            }
-
+            </div>  
+            <button onClick={(e) => startGame(e)}>Start Game</button>
         </div>
     )
 }
