@@ -9,6 +9,8 @@ Rails.application.routes.draw do
   post "/startgame", to: "games#start_game"
   post "/joingame", to: "games#join_game"
   post "/addbot", to: "games#add_bot"
+  get "/currentuser/:game_id", to: "games#get_current_user"
+  post "/playforplayer", to: "games#play_for_player"
   delete "/deletegame/:id", to: "games#destroy"
   get "/existinggame", to: "games#get_existing_game"
   post "/playcard", to:"games#play_card"

@@ -85,7 +85,7 @@ end
     if singleplayer
       fillBots(game_id)
     end
-    set_player_order(game_id, singleplayer)
+    #set_player_order(game_id, singleplayer)
     game = Game.find_by_id(game_id)
     render json: game, include: {cards: {}, players: { include: :cards } }, status: :created
   end
@@ -115,6 +115,14 @@ end
     render json: game, include: {cards: {}, players: { include: :cards } }
   end
 
+  def get_current_user
+    game_id = params[:game_id].to_i
+    current_user_id = session[:user_id]
+    current_player = Player.find_by(user_id: current_user_id, game_id: game_id)
+    current_player_id = current_player.id
+    render json: current_player_id
+  end
+
 def handle_draw_cards
 #draw until player has playable card
 
@@ -125,11 +133,35 @@ def handle_draw_cards
   puts current_player_id
   draw_cards(game_id, current_player_id)
   game = Game.find_by_id(game_id)
+  message = {
+    updated_game: game.as_json(include: { cards: {}, players: { include: :cards } })
+  }
+  GameChannel.broadcast_to(game_id, message)
   render json: game, include: {cards: {}, players: { include: :cards } }
 
 end
 
+def play_for_player
+  game_id = params[:game_id].to_i
+  game = Game.find_by_id(game_id)
+  current_user_id = session[:user_id]
+  current_player = Player.find_by(user_id: current_user_id, game_id: game_id)
 
+  current_player_id = current_player.id
+  do_bot_action(game_id, current_player_id)
+  hand_length = Card.where(game_id: game_id, player_id: current_player_id).length
+  if hand_length > 0
+    set_next_turn(game_id, current_player_id)
+  else
+    game.update(game_state: "ended")
+  end
+  game = Game.find_by_id(params[:game_id])
+  message = {
+    updated_game: game.as_json(include: { cards: {}, players: { include: :cards } })
+  }
+  GameChannel.broadcast_to(game_id, message)
+  render json: game, include: {cards: {}, players: { include: :cards } }
+end
 
 
   def play_card
@@ -173,15 +205,25 @@ end
 
     end
     game = Game.find_by_id(params[:game_id])
+    message = {
+      updated_game: game.as_json(include: { cards: {}, players: { include: :cards } })
+    }
+    GameChannel.broadcast_to(game_id, message)
     render json: game, include: {cards: {}, players: { include: :cards } }
   end
 
 
   def start_game
+    Rails.logger.debug( "game is starting")
     game = Game.find_by_id(params[:game_id])
     game_id = params[:game_id]
     players = Player.where(game_id: game_id)
+    singleplayer = params[:singleplayer]
+    Rails.logger.debug("Game player count is: #{game.player_count}")
     if game.player_count == 4
+      Rails.logger.debug( "setting player order.")
+      set_player_order(game_id, singleplayer)
+
       game.update(game_state: "started")
       card_array = create_card_array(game.id)
 
@@ -201,10 +243,10 @@ end
 
       GameChannel.broadcast_to(game_id, message)
     render json: game, include: {cards: {}, players: { include: :cards } }
-    else 
+    else
       render json: { error: "Not enough players to start the game." }
     end
-    
+
   end
 
 
@@ -285,7 +327,7 @@ def draw_cards(game_id, current_player_id)
 
   hand = Card.where(game_id: game_id, player_id: current_player_id)
   playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
-  puts "Playable cards? #{playable_cards}"
+  Rails.logger.debug("Playable cards? #{playable_cards}")
   has_playable_card = playable_cards.include?(true)
 
   deck = Card.where(game_id: game_id, is_available: true)
@@ -309,6 +351,10 @@ def draw_cards(game_id, current_player_id)
     puts "This is new_card_ids #{new_card_ids}"
     Card.where(id: new_card_ids).update_all(player_id: current_player_id, is_available: false)
     game.update(draw_cards_counter: 0)
+    hand = Card.where(game_id: game_id, player_id: current_player_id)
+    playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
+    Rails.logger.debug("Check Playable cards after draw counter? #{playable_cards}")
+    has_playable_card = playable_cards.include?(true)
     if !has_playable_card
       draw_cards(game_id, current_player_id)
     end
@@ -343,9 +389,9 @@ def draw_cards(game_id, current_player_id)
 end
 
 def set_player_order(game_id, singleplayer)
-  players = Player.where(game_id: game_id)
   shuffled_player_order = []
   if (singleplayer)
+    players = Player.where(game_id: game_id)
     current_user_id = session[:user_id]
     current_player = Player.find_by(user_id: current_user_id)
     current_user_player = players.find_by(user_id: current_user_id)
@@ -353,8 +399,12 @@ def set_player_order(game_id, singleplayer)
     shuffled_other_players = other_players.pluck(:id).shuffle
     shuffled_player_order = [current_user_player.id] + shuffled_other_players
   else
-  player_ids = players.pluck(:id)
-  shuffled_player_order = player_ids.shuffle
+    players = Player.where(game_id: game_id, is_bot: false)
+    player_ids = players.pluck(:id)
+    shuffled_players = player_ids.shuffle
+    other_players = Player.where(game_id: game_id, is_bot: true)
+    shuffled_other_players = other_players.pluck(:id).shuffle
+    shuffled_player_order = shuffled_players + shuffled_other_players
   end
   game = Game.find(game_id)
   game.update(player_order: shuffled_player_order)
@@ -473,6 +523,8 @@ def check_player_is_bot(current_player_id)
 end
 
 def do_bot_action(game_id, current_player_id)
+  Rails.logger.debug("[DEBUGLAND] doing bot action for #{current_player_id}")
+  sleep(2)
   game = Game.find_by_id(game_id)
   hand = Card.where(game_id: game_id, player_id: current_player_id)
   card_ids = hand.pluck(:id)
@@ -480,38 +532,51 @@ def do_bot_action(game_id, current_player_id)
 
   playable_card_id = card_ids.find {|card_id| is_card_playable(game_id, card_id) }
   playable_card = Card.find_by_id(playable_card_id)
+  Rails.logger.debug("playable card: " + playable_card.to_s)
   if playable_card
-    puts "card is played, #{playable_card.color} #{playable_card.value}"
+    Rails.logger.debug("card is played, #{playable_card.color} #{playable_card.value}")
     playable_card.update(in_play: true, player_id: nil)
     if playable_card.value == "wild" or playable_card.value == "wild draw 4"
       #above hand will still include playable_card even after update because it points to the query that ran before the update
       new_hand = Card.where(game_id: game_id, player_id: current_player_id)
       color_counts = new_hand.where.not(color: "black").group_by(&:color).transform_values(&:count)
       most_common_color = color_counts.max_by { |_, count| count }&.first
-      puts most_common_color
+      Rails.logger.debug("bot picks most common color which is: " + most_common_color)
     end
     play_card_effect(playable_card_id, most_common_color, game_id, current_player_id)
     game = Game.find_by_id(game_id)
   else
+    hand = Card.where(game_id: game_id, player_id: current_player_id)
+    Rails.logger.debug("[DEBUGLAND] This is hand before draw #{hand.as_json}")
     draw_cards(game_id, current_player_id)
     hand = Card.where(game_id: game_id, player_id: current_player_id)
-    puts "This is hand#{hand}"
+    Rails.logger.debug("[DEBUGLAND] This is hand after draw #{hand.as_json}")
     new_card_ids = hand.pluck(:id)
-    puts "This is new_card_ids#{new_card_ids}"
-    playable_card_id = new_card_ids.find {|card_id| is_card_playable(game_id, card_id) }
-    puts "This is playable_card_id#{playable_card_id}"
+    Rails.logger.debug("This is new_card_ids#{new_card_ids.inspect}")
+    playable_card_id = new_card_ids.find do |card|
+      result = is_card_playable(game_id, card)
+      Rails.logger.debug("Card #{card} is playable: #{result}")
+      result
+    end
+    last_card_played = get_last_card_played(game_id)
+    Rails.logger.debug("[DEBUGLAND] last played card is: #{last_card_played.as_json}")
+    if !playable_card_id
+      Rails.logger.debug("[DEBUGLAND] PLAYABLE CARD ID IS NIL?!?!")
+    end
+    Rails.logger.debug("This is playable_card_id#{playable_card_id}")
     playable_card = Card.find_by_id(playable_card_id)
-    puts "card is played, #{playable_card.color} #{playable_card.value}"
+    Rails.logger.debug("card is played, #{playable_card.color} #{playable_card.value}")
     playable_card.update(in_play:true, player_id: nil)
     if playable_card.value == "wild" or playable_card.value == "wild draw 4"
       #above hand will still include playable_card even after update because it points to the query that ran before the update
       new_hand = Card.where(game_id: game_id, player_id: current_player_id)
       color_counts = new_hand.group_by(&:color).transform_values(&:count)
       most_common_color = color_counts.max_by { |_, count| count }&.first
-      puts most_common_color
+      Rails.logger.debug("bot picks most common color after drawing new cards which is: " + most_common_color)
     end
     play_card_effect(playable_card_id, most_common_color, game_id, current_player_id)
     game = Game.find_by_id(game_id)
+
   end
 
 end
@@ -519,6 +584,8 @@ end
 def play_card_effect(card_id, color, game_id, current_player_id)
   card_to_play = Card.find_by_id(card_id)
   current_game = Game.find_by_id(game_id)
+  Rails.logger.debug("Card to play is:" + card_to_play.to_s)
+  Rails.logger.debug("current game is:" + current_game.to_s)
   if card_to_play.value == "wild"
     card_to_play.update(color: color)
   elsif card_to_play.value == "wild draw 4"

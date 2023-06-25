@@ -2,6 +2,7 @@ import { useEffect, useState, useContext } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from './App.js';
 import { useGameContext } from './contexts/GameContext';
+import Timer from './components/Timer.js';
 function Game() {
     const navigate = useNavigate();
     const [playerHands, setPlayerHands] = useState([])
@@ -155,7 +156,9 @@ function Game() {
                                     </div>
                                 )}
                             </div>
+
                         </div>
+                        <Timer />
                         {playerHands.map((player, index) => {
                             let position;
                             const userPlayerIndex = playerHands.findIndex(p => p.user_id === user.id)
@@ -177,6 +180,7 @@ function Game() {
 
                             return (
                                 <div className={`player-container ${position}`} key={player.id}>
+
                                     <div className="card-container">
                                         {player.cards.map((card) => (
                                             <div

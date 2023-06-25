@@ -41,7 +41,7 @@ function Lobby() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ game_id: gameObject.id }),
+                body: JSON.stringify({ game_id: gameObject.id, singleplayer: singlePlayer }),
             })
                 .then(response => response.json())
                 .then(data => {
@@ -49,7 +49,7 @@ function Lobby() {
                         alert("Not enough players to start the game. Wait for more players or add bots.")
                     } else {
 
-                    
+
                         console.log(data)
                         updateGameObject(data)
                         navigate(`/game/${data.id}`)
@@ -77,7 +77,7 @@ function Lobby() {
                         <ProfilePicture index={index} player_data={player} gameObject={gameObject} updateGameObject={updateGameObject}></ProfilePicture>
                     )
                 })}
-            </div>  
+            </div>
             <button onClick={(e) => startGame(e)}>Start Game</button>
         </div>
     )

@@ -17,7 +17,7 @@ function Home() {
     const [profileLoading, setProfileLoading] = useState(false)
 
     const userContext = useContext(UserContext);
-    const { user, setUser, playerData, setPlayerData, cable, profilePicture, setProfilePicture, singlePlayer, setSinglePlayer } = userContext;
+    const { currentUserPlayerID, setCurrentUserPlayerID, user, setUser, playerData, setPlayerData, cable, profilePicture, setProfilePicture, singlePlayer, setSinglePlayer } = userContext;
     const { gameObject, updateGameObject } = useGameContext();
 
     useEffect(() => {
@@ -44,6 +44,7 @@ function Home() {
             </div>
         }
     }
+
 
     const changePicture = (e) => {
         setIsVisible(false)
