@@ -9,7 +9,7 @@ import * as ActionCable from "@rails/actioncable";
 import { GameProvider } from './contexts/GameContext';
 
 export const UserContext = createContext();
-const cable = ActionCable.createConsumer("ws://localhost:3000/cable");
+const cable = ActionCable.createConsumer("ws://unogame.onrender.com/cable");
 function App() {
   const [playerData, setPlayerData] = useState(null)
   const [user, setUser] = useState(null);
