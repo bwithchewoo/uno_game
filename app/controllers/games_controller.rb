@@ -5,6 +5,7 @@ class GamesController < ApplicationController
 
 
   def destroy
+    game_id = params[:id]
     game = Game.find_by(id: params[:id])
     puts "This is the params in destroy #{params}"
     puts "This is the game thats being deleted #{game}"
@@ -13,6 +14,10 @@ class GamesController < ApplicationController
       game.players.destroy_all
       game.destroy
     end
+    message = {
+      updated_game: nil.as_json
+    }
+    GameChannel.broadcast_to(game_id, message)
   end
 
   def get_hand
@@ -371,10 +376,12 @@ def draw_cards(game_id, current_player_id)
     end
     deck = Card.where(game_id: game_id, is_available: true)
     random_card = deck.sample
+    Rails.logger.debug("This is the deck: #{deck.inspect}")
+    Rails.logger.debug("This is random_card: #{random_card.inspect}")
     if random_card
       random_card.update(is_available: false)
     end
-    puts "This is random card: #{random_card}"
+    Rails.logger.debug("This is random_card after update: #{random_card.inspect}")
     Card.where(id: random_card.id).update_all(player_id: current_player_id, is_available: false)
     hand = Card.where(game_id: game_id, player_id: current_player_id)
     new_playable_cards = check_playable_cards_from_hand(game_id, current_player_id)
@@ -431,7 +438,7 @@ end
 def generate_hand(game_id, player_id)
   hand = []
   deck = get_deck(game_id)
-  while hand.length < 7
+  while hand.length < 5
     #cardArray does not exist, in separate function, must call get_deck and then do random
     random_card = deck.sample
     puts random_card
@@ -490,11 +497,17 @@ def set_next_turn(game_id, current_player_id)
     current_player_id = previous_player
     puts "#{current_player_id}"
   end
-
+  game = Game.find_by_id(game_id)
+  message = {
+    message: "bot-action",
+    updated_game: game.as_json(include: { cards: {}, players: { include: :cards } })
+  }
+  GameChannel.broadcast_to(game_id, message)
   if check_player_is_bot(current_player_id)
     puts "check_player_is_bot returned true"
+    game = Game.find_by_id(game_id)
       do_bot_action(game_id, current_player_id)
-      game = Game.find_by_id(game_id)
+      
       current_player_id = game.current_player_id
       # 1. get playable cards for the bot
       # 2. play playable cards for the bot if exists
@@ -524,7 +537,7 @@ end
 
 def do_bot_action(game_id, current_player_id)
   Rails.logger.debug("[DEBUGLAND] doing bot action for #{current_player_id}")
-  sleep(2)
+  #sleep(2)
   game = Game.find_by_id(game_id)
   hand = Card.where(game_id: game_id, player_id: current_player_id)
   card_ids = hand.pluck(:id)
@@ -570,9 +583,15 @@ def do_bot_action(game_id, current_player_id)
     if playable_card.value == "wild" or playable_card.value == "wild draw 4"
       #above hand will still include playable_card even after update because it points to the query that ran before the update
       new_hand = Card.where(game_id: game_id, player_id: current_player_id)
+      Rails.logger.debug("what is new hand???, #{new_hand}")
+      if new_hand
       color_counts = new_hand.group_by(&:color).transform_values(&:count)
       most_common_color = color_counts.max_by { |_, count| count }&.first
+      most_common_color = "red" if most_common_color == "black"
       Rails.logger.debug("bot picks most common color after drawing new cards which is: " + most_common_color)
+      else
+        most_common_color = "red"
+      end
     end
     play_card_effect(playable_card_id, most_common_color, game_id, current_player_id)
     game = Game.find_by_id(game_id)

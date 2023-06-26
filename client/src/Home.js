@@ -82,7 +82,7 @@ function Home() {
 
                 updateGameObject(gameObject)
                 setSinglePlayer(true)
-                const gameChannel = cable.subscriptions.create({ channel: "GameChannel", game_id: data.id, username: "chewoo" }, {
+                const gameChannel = cable.subscriptions.create({ channel: "GameChannel", game_id: data.id}, {
                     received: function (data) {
                         // Handle the received broadcast message
                         // Update your client-side state or perform any necessary UI updates
@@ -112,7 +112,7 @@ function Home() {
                 //navigate(`/lobby/${gameObject.id}`);
 
                 // Subscribe to the GameChannel with the game ID
-                const gameChannel = cable.subscriptions.create({ channel: "GameChannel", game_id: game.id, username: "chewoo" }, {
+                const gameChannel = cable.subscriptions.create({ channel: "GameChannel", game_id: game.id}, {
                     received: function (data) {
                         // Handle the received broadcast message
                         // Update your client-side state or perform any necessary UI updates
@@ -156,7 +156,7 @@ function Home() {
                     alert("no games to join, create a new game")
                 } else {
                     updateGameObject(data);
-                    const gameChannel = cable.subscriptions.create({ channel: "GameChannel", game_id: data.id, username: "chew" }, {
+                    const gameChannel = cable.subscriptions.create({ channel: "GameChannel", game_id: data.id}, {
                         received: function (data) {
                             // Handle the received broadcast message
                             // Update your client-side state or perform any necessary UI updates

@@ -8,9 +8,11 @@ function Game() {
     const [playerHands, setPlayerHands] = useState([])
     const [lastUpdatedCard, setLastUpdatedCard] = useState(null);
     const userContext = useContext(UserContext);
-    const { gameObject, updateGameObject } = useGameContext();
+    const { setCurrentUserPlayerID, gameObject, updateGameObject } = useGameContext();
     const { user, cable, profilePicture, setProfilePicture, singlePlayer, setSinglePlayer } = userContext;
-
+    if (!gameObject?.id) {
+        navigate("/")
+    }
     useEffect(() => {
         if (gameObject && gameObject.players) {
             setPlayerHands(gameObject.players);
@@ -31,6 +33,9 @@ function Game() {
     if (gameObject) {
         if (gameObject.game_state === 'ended') {
             alert('The game has ended.');
+            setCurrentUserPlayerID(null)
+            const channelIdentifier = {channel: "GameChannel", game_id: gameObject.id}
+            cable.subscriptions.remove(channelIdentifier)
             navigate('/'); // Route to the home page
 
         }
@@ -41,7 +46,7 @@ function Game() {
     }
 
     const playCard = (cardId, cardColor) => {
-        console.log('Card color:', cardColor);
+       
         if (cardColor === 'black') {
             let chosenColor = '';
 
@@ -67,7 +72,7 @@ function Game() {
                             }
                         })
                         .then((data) => {
-                            console.log(data)
+                           
                             if (data.error === "not playable card") {
                                 alert("not playable card")
                             } else if (data.error === "not your turn") {
@@ -101,14 +106,12 @@ function Game() {
                     }
                 })
                 .then((data) => {
-                    console.log(data)
+   
                     if (data.error === "not playable card") {
                         alert("not playable card")
                     } else if (data.error === "not your turn") {
                         alert("not your turn")
-                    } else {
-                        updateGameObject(data);
-                    } // Log the parsed JSON object // Log the parsed JSON object
+                    } 
                 });
         }
     }
@@ -128,12 +131,38 @@ function Game() {
                     return response.json();
                 }
             })
-            .then((data) => {
-                console.log("this is", data)
 
-                updateGameObject(data);
-                // Log the parsed JSON object // Log the parsed JSON object
-            });
+    }
+
+    const exitGame = () => {
+     
+        const channelIdentifier = {channel: "GameChannel", game_id: gameObject.id}
+
+        
+        if (gameObject?.id) {
+            console.log("DELETE ME")
+            fetch(`/deletegame/${gameObject?.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // Add any necessary request body or headers
+                // body: JSON.stringify({ key: value }),
+            })
+            .then(() => {
+                setCurrentUserPlayerID(null)
+                const subscription = cable.subscriptions.subscriptions.find(sub => {
+                  const { channel, game_id } = sub.identifier;
+                  return channel === channelIdentifier.channel && game_id === channelIdentifier.game_id;
+                });
+                
+                if (subscription) {
+                  cable.subscriptions.remove(subscription);
+                }
+                console.log("Subscriptions array:", cable.subscriptions.subscriptions);
+                navigate("/");
+              });
+        }
     }
 
     return (
@@ -196,6 +225,9 @@ function Game() {
                                 </div>
                             )
                         })}
+                        <div className="button-container">
+                    <button className="top-right-button" onClick={exitGame}>Exit Game</button>
+                </div>
                     </>
                 )
             }

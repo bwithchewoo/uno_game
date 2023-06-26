@@ -25,7 +25,7 @@ export const GameProvider = ({ children }) => {
         // get existin game if it exists
         fetch("/getexistinggame").then((r) => {
             if (r.ok) {
-                console.log("hi")
+            
                 r.json().then((game) => {
                     setGameObject(game)
                 })
@@ -35,11 +35,11 @@ export const GameProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        console.log("copiuming " + gameObject)
+
         if (gameObject && gameObject.game_state == "created") {
             fetch(`/profilepics/${gameObject.id}`).then((r) => {
                 if (r.ok) {
-                    console.log("getting profilepics")
+         
                     r.json().then((data) => {
                         setPlayerData(data)
                     })
@@ -55,11 +55,11 @@ export const GameProvider = ({ children }) => {
 
     useEffect(() => {
 
-        if (currentUserPlayerID === null && gameObject) {
+        if (currentUserPlayerID === null && gameObject && gameObject.game_state != "ended") {
             fetch(`/currentuser/${gameObject.id}`).then((r) => {
                 if (r.ok) {
                     r.json().then((user) => {
-                        console.log("This is userid" + user)
+               
                         setCurrentUserPlayerID(user)
 
                     })
@@ -73,10 +73,11 @@ export const GameProvider = ({ children }) => {
         if (currentUserPlayerID !== null && gameObject) {
             // Check if it's the user's turn based on the current_player_id and current user's player ID
             const isUserCurrentTurn = gameObject.current_player_id === currentUserPlayerID;
-            console.log(isUserCurrentTurn)
+            console.log("isUserCurrentTurn" + isUserCurrentTurn)
+            console.log("CurrentUserPlayerID" + currentUserPlayerID)
             setIsUserTurn(isUserCurrentTurn);
         }
-    }, [gameObject, currentUserPlayerID]);
+    }, [gameObject, currentUserPlayerID, setIsUserTurn]);
 
 
     // Value object for the context provider
@@ -84,7 +85,8 @@ export const GameProvider = ({ children }) => {
         gameObject,
         updateGameObject,
         currentUserPlayerID,
-        isUserTurn
+        isUserTurn, 
+        setCurrentUserPlayerID
     };
 
     return (

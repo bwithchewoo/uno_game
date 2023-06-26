@@ -1,7 +1,7 @@
 class GameChannel < ApplicationCable::Channel
   def subscribed
-    user = params['username']
-    ActionCable.server.broadcast "#{params[:game_id]}", "#{user} joined!"
+    
+    ActionCable.server.broadcast "#{params[:game_id]}", "user joined!"
      stream_from "game:#{params[:game_id]}"
   end
 
@@ -9,6 +9,6 @@ class GameChannel < ApplicationCable::Channel
 
   def unsubscribed
     # Any cleanup needed when channel is unsubscribed
-    raise NotImplementedError
+    stop_stream_from "game:#{params[:game_id]}"
   end
 end

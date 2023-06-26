@@ -4,6 +4,9 @@ const Timer = () => {
     const [seconds, setSeconds] = useState(2);
     const { gameObject, updateGameObject } = useGameContext();
     const isUserTurn = useGameContext().isUserTurn;
+
+    console.log(isUserTurn)
+    console.log(gameObject)
     useEffect(() => {
         if (isUserTurn) {
             setSeconds(2); // Reset seconds to 10 at the start of the user's turn
@@ -28,11 +31,7 @@ const Timer = () => {
                         return response.json();
                     }
                 })
-                .then((data) => {
-
-                    updateGameObject(data);
-                    // Log the parsed JSON object // Log the parsed JSON object
-                });
+               
         };
 
         let timer = null;
