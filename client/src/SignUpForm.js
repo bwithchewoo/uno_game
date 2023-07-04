@@ -41,6 +41,7 @@ function SignUpForm({ onLogin, setProfilePicture }) {
     }
 
     return (
+        <div class="form-container sign-up-container">
         <form onSubmit={handleSubmit}>
             <div>
                 <label htmlFor="username">Username</label>
@@ -74,7 +75,7 @@ function SignUpForm({ onLogin, setProfilePicture }) {
             </div>
 
             <div>
-                <button type="submit">{isLoading ? "Loading..." : "Sign Up"}</button>
+                <button class="signinup" type="submit">{isLoading ? "Loading..." : "Sign Up"}</button>
             </div>
             <div>
                 {errors.map((err) => (
@@ -82,6 +83,8 @@ function SignUpForm({ onLogin, setProfilePicture }) {
                 ))}
             </div>
         </form>
+        
+        </div>
     );
 }
 

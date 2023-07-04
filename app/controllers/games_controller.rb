@@ -115,7 +115,7 @@ end
       some_message: "someone joined the game yay",
       updated_game: game.as_json(include: { cards: {}, players: { include: :cards } })
     }
-    puts 'borasdjoji'
+
     GameChannel.broadcast_to(game_id, message)
     render json: game, include: {cards: {}, players: { include: :cards } }
   end

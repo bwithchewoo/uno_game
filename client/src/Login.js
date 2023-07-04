@@ -2,6 +2,7 @@ import { useState } from 'react';
 import SignUpForm from "./SignUpForm"
 import uno from './assets/logo.png'
 import cat from './assets/cat_icon.jpg'
+import './Login.css'
 function Login({ onLogin, setProfilePicture }) {
     const [showLogin, setShowLogin] = useState(true);
     const [username, setUsername] = useState("");
@@ -46,7 +47,7 @@ function Login({ onLogin, setProfilePicture }) {
     }
 
     return (
-        <div className='Login'>
+        <div class="container" id="container">
             <div><img src={uno} style={{ width: "200px", height: "150px" }} /> </div>
             {showLogin ? (
                 <>
@@ -72,7 +73,7 @@ function Login({ onLogin, setProfilePicture }) {
                             />
                         </div>
                         <div>
-                            <button variant="fill" color="primary" type="submit">
+                            <button class="signinup" variant="fill" color="primary" type="submit">
                                 {isLoading ? "Loading..." : "Login"}
                             </button>
                         </div>
@@ -85,7 +86,7 @@ function Login({ onLogin, setProfilePicture }) {
                     <hr />
                     <p>
                         Don't have an account? &nbsp;
-                        <button color="secondary" onClick={() => setShowLogin(false)}>
+                        <button class="signinup" color="secondary" onClick={() => setShowLogin(false)}>
                             Sign Up
                         </button>
                     </p>
@@ -96,7 +97,7 @@ function Login({ onLogin, setProfilePicture }) {
                     <hr />
                     <p>
                         Already have an account? &nbsp;
-                        <button color="secondary" onClick={() => setShowLogin(true)}>
+                        <button class="signinup" color="secondary" onClick={() => setShowLogin(true)}>
                             Log In
                         </button>
                     </p>
