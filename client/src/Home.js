@@ -9,7 +9,7 @@ import singleplayer from './assets/SINGLEPLAYER.png'
 import multiplayer from './assets/MULTIPLAYER.png'
 import { UserContext } from './App.js';
 import { useGameContext } from './contexts/GameContext';
-
+import './Home.css'
 function Home() {
     const navigate = useNavigate();
     const [showOptions, setShowOptions] = useState(false);
@@ -36,11 +36,11 @@ function Home() {
 
     const imageList = () => {
         if (isVisible) {
-            return <div style={{ zIndex: 1, position: "absolute", top: "30%", left: "30%", borderStyle: "solid" }}>
-                <img src={cat} style={{ width: "100px", height: "100px" }} onClick={(e) => { changePicture(e) }} />
-                <img src={drool} style={{ width: "100px", height: "100px" }} onClick={(e) => { changePicture(e) }} />
-                <img src={penguin} style={{ width: "100px", height: "100px" }} onClick={(e) => { changePicture(e) }} />
-                <img src={plane} style={{ width: "100px", height: "100px" }} onClick={(e) => { changePicture(e) }} />
+            return <div class="imagelist" style={{ zIndex: 1, position: "absolute", top: "100%",  borderStyle: "solid" }}>
+                <img src={cat} style={{ width: "150px", height: "150px" }} onClick={(e) => { changePicture(e) }} />
+                <img src={drool} style={{ width: "150px", height: "150px" }} onClick={(e) => { changePicture(e) }} />
+                <img src={penguin} style={{ width: "150px", height: "150px" }} onClick={(e) => { changePicture(e) }} />
+                <img src={plane} style={{ width: "150px", height: "150px" }} onClick={(e) => { changePicture(e) }} />
             </div>
         }
     }
@@ -173,14 +173,14 @@ function Home() {
     }
 
     return (
-        <div>
-            <div style={{ fontSize: "20px", display: "flex", flexDirection: "row" }}>
+        <div >
+            <div class="profile" style={{ fontSize: "20px", display: "flex", flexDirection: "row" }}>
                 {
-                    profileLoading ? <img src={loading} style={{ width: "100px", height: "100px" }} /> : <img src={profilePicture} style={{ width: "100px", height: "100px" }} onClick={(e) => showImageList(e)} />
+                    profileLoading ? <img src={loading} style={{ width: "150px", height: "150px" }} /> : <img src={profilePicture} style={{ width: "150px", height: "150px" }} onClick={(e) => showImageList(e)} />
                 }
 
                 {imageList()}
-                <div>
+                <div class="profileinfo">
                     <div>
                         {user.username}
                     </div>
@@ -284,15 +284,8 @@ function Home() {
                     right: "20px",
                 }}
             >
-                <button
-                    style={{
-                        backgroundColor: "red",
-                        width: "120px",
-                        height: "40px",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                        color: "white",
-                    }}
+                <button class="signinup"
+                   
                     onClick={handleLogout}  // Add your logout function
                 >
                     Logout

@@ -1,0 +1,19 @@
+.profile {
+    width: 450px;
+    height: 150px;
+    position: absolute;
+    border-radius: 5px;
+    background-color: #fafafa;
+    box-shadow: 0 0 2rem #babbbc;
+}
+.profileinfo {
+    position: relative;
+    margin-top: 10px;
+    margin-left: 10px;
+    font-size: x-large;
+
+}
+
+.imagelist {
+    display:flex;
+}

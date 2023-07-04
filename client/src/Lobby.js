@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ProfilePicture from './components/ProfilePicture.js';
 import { UserContext } from './App.js';
 import { useGameContext } from './contexts/GameContext.js';
-
+import './Lobby.css'
 function Lobby() {
     const navigate = useNavigate()
     const userContext = useContext(UserContext);
@@ -58,7 +58,7 @@ function Lobby() {
     return (
         <div>
             <Link to="/">
-                <button onClick={(e) => deleteGame(e)}>Home</button>
+                <button class="lobbybutton" onClick={(e) => deleteGame(e)}>Exit Lobby</button>
             </Link>
             <div className="lobby">
                 {/* <img src={profilePicture} style={{ width: "100px", height: "100px" }} className="centered-image" /> */}
@@ -72,7 +72,7 @@ function Lobby() {
                     )
                 })}
             </div>  
-            <button onClick={(e) => startGame(e)}>Start Game</button>
+            <button class="lobbybutton" onClick={(e) => startGame(e)}>Start Game</button>
         </div>
     )
 }
