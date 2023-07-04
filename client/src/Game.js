@@ -209,7 +209,7 @@ function Game() {
 
                             return (
                                 <div className={`player-container ${position}`} key={player.id}>
-
+                                    <h1>{player.user_id === user.id ? user.username : ''}</h1>
                                     <div className="card-container">
                                         {player.cards.map((card) => (
                                             <div
