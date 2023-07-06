@@ -4,6 +4,15 @@
 Sign up and then log in as a user.
 ![SignUp Demo](Signup.gif)
 
+Change your profile picture.
+![ImageChange Demo](imagechange.gif)
+
+Play a singleplayer game.
+![Singleplayer](singleplayer.gif)
+
+Play a multiplayer game.
+![Multiplayer](multiplayer.gif)
+
 ## Setup
 
 You can use the following commands to run the application:
